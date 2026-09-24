@@ -6,10 +6,11 @@ This private code-only snapshot is meant to be downloaded manually to
 models, datasets, checkpoints or credentials are included. Do not use the
 older B200 scripts on A30.
 
-The 4×A30 profile starts with the previously used Qwen3-1.7B-Instruct student
-and Qwen3-4B-Base-GRPO teacher. It does **not** imply that 4B→8B/14B/32B
-fits 24 GB per GPU. Those are separate exploratory profiles after a memory
-probe. See [PLAN_A30.md](frontier_company/PLAN_A30.md).
+The matched 4×A30 profile starts with the previously used Qwen3-1.7B-Instruct
+student and Qwen3-4B-Base-GRPO teacher. A separate **two-step systems-only**
+profile probes the proposed Qwen3-4B→Qwen3-8B pair. It does **not** imply that
+4B→8B/14B/32B fits 24 GB per GPU, or that results across pairs are directly
+comparable. See [PLAN_A30.md](frontier_company/PLAN_A30.md).
 
 ## Offline handoff
 
@@ -70,6 +71,19 @@ response tokens, G=4, batch=4, full BF16 with offload:
 bash frontier_company/preflight_a30.sh frontier_company/config_a30_4gpu.env
 bash frontier_company/start_a30_background.sh frontier_company/config_a30_4gpu.env E1_grpo_base
 ```
+
+After the larger student and teacher are present locally, probe their
+feasibility without changing the matched profile:
+
+```bash
+bash frontier_company/preflight_a30.sh frontier_company/config_a30_4b8b_probe.env
+bash frontier_company/start_a30_background.sh frontier_company/config_a30_4b8b_probe.env E1_grpo_base
+```
+
+Edit the two model paths in that probe config if the actual local directory
+names differ. Do not proceed to a 7,168-token 4B→8B study until this probe
+records acceptable memory and phase timings. An E1-only probe checks student
+memory; E2/E4 probe the additional teacher path.
 
 Other IDs: `E2_opd_base`, `E3_hybrid_static`, `E4_hybrid_dynamic`,
 `E5_hybrid_dynamic_queue`. Run comparable arms with the same immutable config,
