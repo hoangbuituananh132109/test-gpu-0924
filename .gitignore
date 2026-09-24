@@ -1,0 +1,23 @@
+# Code-only snapshot. Never commit local assets or execution artifacts.
+*.parquet
+*.arrow
+*.safetensors
+*.bin
+*.pt
+*.pth
+*.ckpt
+*.gguf
+*.log
+*.pid
+.env
+.env.*
+**/.env
+**/.env.*
+**/models/
+**/datasets/
+**/runs/
+**/checkpoints/
+**/checkpoint/
+**/wandb/
+**/__pycache__/
+*.pyc
