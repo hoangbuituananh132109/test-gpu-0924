@@ -1,27 +1,36 @@
 # Offline 4×A30 runner (code snapshot)
 
-This private code-only snapshot is meant to be downloaded manually to
+This public code-only work branch is meant to be downloaded manually to
 `/nlp/anhhbt/test-gpu-0924` on the company machine. It contains a patched
 `verl` tree, `frontier` algorithms and a conservative 4×A30 profile. No
 models, datasets, checkpoints or credentials are included. Do not use the
 older B200 scripts on A30.
 
-The matched 4×A30 profile starts with the previously used Qwen3-1.7B-Instruct
-student and Qwen3-4B-Base-GRPO teacher. A separate **two-step systems-only**
-profile probes the proposed Qwen3-4B→Qwen3-8B pair. It does **not** imply that
+The matched 4×A30 profile now uses Qwen3-1.7B-Instruct student and
+Qwen3-4B-Instruct teacher (local directories `Qwen3-1.7B` and `Qwen3-4B`).
+These Qwen3 releases support thinking mode despite lacking an `-Instruct`
+suffix. Do not substitute `Qwen3-4B-Instruct-2507`, which is a distinct
+non-thinking release, without designing a separate regime. A separate
+**two-step systems-only** profile probes Qwen3-4B→Qwen3-8B. It does **not** imply that
 4B→8B/14B/32B fits 24 GB per GPU, or that results across pairs are directly
 comparable. See [PLAN_A30.md](frontier_company/PLAN_A30.md).
 
 ## Offline handoff
 
-On a machine that has GitHub access, download the private branch as a ZIP.
+On a machine that has GitHub access, download the `work/4xa30` branch as a ZIP;
+the public `main` branch is only a small scratch project and has no runner.
 Move the ZIP to the company machine by your approved transfer method and
 extract it under `/nlp/anhhbt/test-gpu-0924`. The company machine must not
 fetch the repo, models or packages from the public network.
 
-Place verified local model directories and a DAPO **training** parquet under
-`/shared-storage/models`. To create the fixed 1,024-prompt pilot, use only
-an approved local DAPO train parquet:
+Data is **not in the GitHub ZIP**. A separate local archive
+`a30-offline-data-20260925.zip` contains the processed DAPO train file, its
+fixed 1,024-prompt pilot, four eval parquet files and a SHA-256 manifest.
+Transfer it separately using the approved channel. Put the two training files
+at `/shared-storage/models/dapo_processed_train.parquet` and
+`/shared-storage/models/dapo_processed_pilot_1024.parquet`. Eval files must
+stay separate from training. If you must regenerate the pilot instead, use
+only the approved local DAPO **train** parquet:
 
 ```bash
 cd /nlp/anhhbt/test-gpu-0924
@@ -42,7 +51,9 @@ bash frontier_company/preflight_a30.sh frontier_company/config_a30_4gpu_smoke.en
 ```
 
 Preflight checks exactly four visible A30s, topology, local packages, local
-model files/tokenizers and the fixed train parquet. It fails before creating
+model files, full tokenizer-ID/thinking-template compatibility and the fixed
+train parquet. OPD scores the student's token IDs directly with the teacher;
+matching tokenizer length alone is insufficient. It fails before creating
 Ray workers. If the existing environment lacks `verl` import, first try:
 
 ```bash
@@ -64,7 +75,15 @@ bash frontier_company/status_a30.sh frontier_company/config_a30_4gpu_smoke.env E
 
 Smoke uses response ceiling 1,024 and two optimizer steps. It is only a
 pipeline/OOM/logging check, never a paper result. Confirm the launcher PID,
-log, exit code, phase timings and GPU memory. The long profile is 7,168
+log, exit code, phase timings and GPU memory. It has `SAVE_FREQ=-1`, so no
+checkpoint is expected. After E1 passes, smoke E4 with the same config to
+exercise the teacher/OPD path:
+
+```bash
+bash frontier_company/run_a30.sh frontier_company/config_a30_4gpu_smoke.env E4_hybrid_dynamic
+```
+
+The long profile is 7,168
 response tokens, G=4, batch=4, full BF16 with offload:
 
 ```bash
@@ -84,6 +103,12 @@ Edit the two model paths in that probe config if the actual local directory
 names differ. Do not proceed to a 7,168-token 4B→8B study until this probe
 records acceptable memory and phase timings. An E1-only probe checks student
 memory; E2/E4 probe the additional teacher path.
+
+Changing from the old Base-GRPO teacher to an Instruct teacher defines a new
+experimental regime. Re-run every compared E1–E5 arm with the same pair and
+data; old results are historical context, not a matched control. The A30
+preflight requires both local model directories even for E1 so that a planned
+comparison does not start with missing teacher assets.
 
 Other IDs: `E2_opd_base`, `E3_hybrid_static`, `E4_hybrid_dynamic`,
 `E5_hybrid_dynamic_queue`. Run comparable arms with the same immutable config,

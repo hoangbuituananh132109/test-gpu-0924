@@ -38,6 +38,7 @@ import torch
 import transformers
 import vllm
 from transformers import AutoConfig, AutoTokenizer
+from frontier_company.check_pair_tokenizer import check_compatible
 
 print('torch', torch.__version__, 'cuda', torch.version.cuda)
 print('transformers', transformers.__version__, 'vllm', vllm.__version__)
@@ -52,6 +53,7 @@ for label, raw in [('train', train), ('val', val)]:
     print(label, 'rows', meta.num_rows)
     if label == 'train' and int(expected) > 0 and meta.num_rows != int(expected):
         raise SystemExit(f'Expected {expected} train rows, got {meta.num_rows}')
+tokenizers = {}
 for label, raw in [('student', student), ('teacher', teacher)]:
     path = Path(raw)
     for file in ('config.json', 'tokenizer_config.json'):
@@ -61,6 +63,9 @@ for label, raw in [('student', student), ('teacher', teacher)]:
         raise SystemExit(f'{label} missing safetensors: {path}')
     cfg = AutoConfig.from_pretrained(path, local_files_only=True, trust_remote_code=True)
     tok = AutoTokenizer.from_pretrained(path, local_files_only=True, trust_remote_code=True)
+    tokenizers[label] = tok
     print(label, cfg.model_type, 'vocab', len(tok))
+check_compatible(tokenizers['student'], tokenizers['teacher'])
+print('TOKENIZER_COMPATIBLE')
 print('A30_OFFLINE_PREFLIGHT_OK')
 PY

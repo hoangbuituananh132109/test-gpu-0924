@@ -4,8 +4,8 @@
    CUDA/driver, topology, free VRAM, RAM, disk, package versions, local model
    hashes and DAPO train hash. Avoid old environment installation if imports
    already work. Missing assets fail closed.
-2. **Systems smoke:** 1,024 output tokens, G=4, batch=4, two steps on the known
-   1.7B-Instruct→4B-GRPO pair. Require finite native GRPO/OPD losses, verifier
+2. **Systems smoke:** 1,024 output tokens, G=4, batch=4, two steps on the new
+   1.7B-Instruct→4B-Instruct pair. Require finite native GRPO/OPD losses, verifier
    outputs, correct 4-rank behavior, checkpoint/log integrity and no OOM.
    Smoke accuracy is not a scientific result.
 3. **Signal census:** on the same fixed 1,024 train prompts, measure k/G
@@ -13,7 +13,8 @@
    cap-hit, teacher reachability/disagreement and OPD/GRPO gradient norms and
    cosine where both are active. No updates in this census. Freeze the G and
    response ceiling before comparisons; G=8 or 16k are separate profiles.
-4. **Larger-pair feasibility:** separately run the 4B→8B two-step profile,
+4. **Larger-pair feasibility:** separately run the 4B-Instruct→8B-Instruct
+   two-step profile,
    first E1 then E2/E4 only if the teacher is available locally. It is a
    systems probe, not a comparable result. Inspect peak VRAM and OOM, then
    decide whether a 7,168-token profile is feasible. Do not infer 14B/32B
@@ -42,3 +43,10 @@ The proposed 4B→8B pair has a separate 1,024-token feasibility config;
 14B/32B do not. Their own offline model assets, full-weight memory preflight
 and equal-budget baselines are prerequisites. Four A30s do not imply each pair
 will fit or that multiple experiments can run concurrently.
+
+The GitHub work branch is code-only. Its train/eval parquet files are in a
+separate local offline ZIP with a hash manifest; models are supplied by the
+company machine. The previous 4B-Base-GRPO teacher runs are not a matched
+control for these Instruct-teacher experiments. Before a scientific pilot,
+lock the primary held-out metric, optimizer-step budget and model hashes for
+all compared E1–E5 arms; the two-step probes answer feasibility only.
